@@ -3,6 +3,14 @@
 #include <algorithm>
 
 #include <GLFW/glfw3.h>
+
+#if defined(_WIN32)
+#ifndef GLFW_EXPOSE_NATIVE_WIN32
+#define GLFW_EXPOSE_NATIVE_WIN32
+#endif
+#include <GLFW/glfw3native.h>
+#endif
+
 #include <imgui.h>
 
 #include "qui/theme.hpp"
@@ -23,7 +31,10 @@ struct WindowBarState {
     bool resizing = false;
     bool resize_cursor_active = false;
     int resize_edges = WindowResizeEdge_None;
+    int drag_start_window_x = 0;
+    int drag_start_window_y = 0;
     ImVec2 drag_offset = ImVec2(0.0F, 0.0F);
+    ImVec2 drag_cursor_start = ImVec2(0.0F, 0.0F);
     ImVec2 resize_cursor_start = ImVec2(0.0F, 0.0F);
     ImVec2 resize_window_pos_start = ImVec2(0.0F, 0.0F);
     ImVec2 resize_window_size_start = ImVec2(0.0F, 0.0F);
@@ -224,9 +235,33 @@ inline void update_window_resize(GLFWwindow *window, const ImVec2 &window_pos, c
     glfwSetWindowSize(window, static_cast<int>(next_width), static_cast<int>(next_height));
 }
 
+inline bool begin_native_title_bar_drag(GLFWwindow *window) {
+#if defined(_WIN32)
+    HWND hwnd = glfwGetWin32Window(window);
+    if (hwnd == nullptr) {
+        return false;
+    }
+
+    ReleaseCapture();
+    SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    return true;
+#else
+    (void)window;
+    return false;
+#endif
+}
+
 inline void update_title_bar_drag(GLFWwindow *window, const ImVec2 &drag_min, const ImVec2 &drag_max, WindowBarState &state) {
-    const ImGuiIO &io = ImGui::GetIO();
-    const bool can_drag = !state.resizing && ImGui::IsMouseHoveringRect(drag_min, drag_max) && !ImGui::IsAnyItemHovered();
+    double cursor_x = 0.0;
+    double cursor_y = 0.0;
+    glfwGetCursorPos(window, &cursor_x, &cursor_y);
+
+    const bool cursor_in_drag_rect =
+        cursor_x >= static_cast<double>(drag_min.x) &&
+        cursor_x <= static_cast<double>(drag_max.x) &&
+        cursor_y >= static_cast<double>(drag_min.y) &&
+        cursor_y <= static_cast<double>(drag_max.y);
+    const bool can_drag = !state.resizing && cursor_in_drag_rect && !ImGui::IsAnyItemHovered();
 
     if (can_drag && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
         if (glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE) {
@@ -239,31 +274,32 @@ inline void update_title_bar_drag(GLFWwindow *window, const ImVec2 &drag_min, co
     }
 
     if (can_drag && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        int window_x = 0;
-        int window_y = 0;
-        double cursor_x = 0.0;
-        double cursor_y = 0.0;
-        glfwGetWindowPos(window, &window_x, &window_y);
-        glfwGetCursorPos(window, &cursor_x, &cursor_y);
+        if (begin_native_title_bar_drag(window)) {
+            state.dragging = false;
+            return;
+        }
+
+        glfwGetWindowPos(window, &state.drag_start_window_x, &state.drag_start_window_y);
 
         state.dragging = true;
-        state.drag_offset = ImVec2(static_cast<float>(cursor_x), static_cast<float>(cursor_y));
+        state.drag_cursor_start = ImVec2(static_cast<float>(state.drag_start_window_x) + static_cast<float>(cursor_x), static_cast<float>(state.drag_start_window_y) + static_cast<float>(cursor_y));
     }
 
-    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != GLFW_PRESS) {
         state.dragging = false;
     }
 
     if (state.dragging) {
-        int window_x = 0;
-        int window_y = 0;
-        double cursor_x = 0.0;
-        double cursor_y = 0.0;
-        glfwGetWindowPos(window, &window_x, &window_y);
         glfwGetCursorPos(window, &cursor_x, &cursor_y);
 
-        const int next_x = window_x + static_cast<int>(cursor_x - state.drag_offset.x);
-        const int next_y = window_y + static_cast<int>(cursor_y - state.drag_offset.y);
+        int window_x = 0;
+        int window_y = 0;
+        glfwGetWindowPos(window, &window_x, &window_y);
+
+        const float cursor_screen_x = static_cast<float>(window_x) + static_cast<float>(cursor_x);
+        const float cursor_screen_y = static_cast<float>(window_y) + static_cast<float>(cursor_y);
+        const int next_x = state.drag_start_window_x + static_cast<int>(cursor_screen_x - state.drag_cursor_start.x);
+        const int next_y = state.drag_start_window_y + static_cast<int>(cursor_screen_y - state.drag_cursor_start.y);
         glfwSetWindowPos(window, next_x, next_y);
     }
 }
@@ -342,7 +378,7 @@ inline void draw_glfw_window_bar(GLFWwindow *window, const char *title, float he
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
 
-    update_title_bar_drag(window, ImVec2(min.x, min.y + 6.0F), ImVec2(minimize_x, max.y), *state);
+    update_title_bar_drag(window, ImVec2(0.0F, 6.0F), ImVec2(minimize_x - min.x, height), *state);
 
     ImGui::End();
     ImGui::PopStyleColor();

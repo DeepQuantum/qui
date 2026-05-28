@@ -10,6 +10,13 @@ option(QUI_BUILD_DEMO "Build the demonstration executable in source/qui/main.cpp
 set(QUI_CXX_STANDARD 20 CACHE STRING "C++ standard used to build qui_base")
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if(CMAKE_CONFIGURATION_TYPES)
+    set(CMAKE_CONFIGURATION_TYPES Debug Release CACHE STRING "" FORCE)
+elseif(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS Debug Release)
+endif()
+
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
@@ -23,6 +30,37 @@ set(GLFW_LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
 add_subdirectory(source/glfw EXCLUDE_FROM_ALL)
 
 find_package(OpenGL REQUIRED)
+
+set(QUI_FONT_DIR "${PROJECT_SOURCE_DIR}/source/qui/assets/fonts/geist-mono")
+
+function(qui_apply_optimizations target)
+    target_compile_definitions(${target}
+        PRIVATE
+            $<$<CONFIG:Release>:NDEBUG>
+    )
+
+    if(MSVC)
+        target_compile_options(${target}
+            PRIVATE
+                $<$<CONFIG:Release>:/O2>
+                $<$<CONFIG:Release>:/Ob2>
+                $<$<CONFIG:Release>:/Oi>
+                $<$<CONFIG:Release>:/Ot>
+                $<$<CONFIG:Release>:/Gy>
+                $<$<CONFIG:Release>:/Gw>
+        )
+        target_link_options(${target}
+            PRIVATE
+                $<$<CONFIG:Release>:/OPT:REF>
+                $<$<CONFIG:Release>:/OPT:ICF>
+        )
+    else()
+        target_compile_options(${target}
+            PRIVATE
+                $<$<CONFIG:Release>:-O3>
+        )
+    endif()
+endfunction()
 
 file(GLOB QUI_SOURCES CONFIGURE_DEPENDS
     "${PROJECT_SOURCE_DIR}/source/qui/*.c"
@@ -46,7 +84,7 @@ add_library(qui_base::qui_base ALIAS qui_base)
 target_compile_definitions(qui_base
     PUBLIC
         NOMINMAX
-        QUI_BASE_FONT_DIR="${PROJECT_SOURCE_DIR}/source/qui/assets/fonts/geist-mono"
+        QUI_BASE_FONT_DIR="${QUI_FONT_DIR}"
 )
 
 target_include_directories(qui_base
@@ -66,11 +104,15 @@ target_link_libraries(qui_base
 
 set_target_properties(qui_base PROPERTIES
     OUTPUT_NAME qui_base
+    DEBUG_POSTFIX _d
     CXX_STANDARD ${QUI_CXX_STANDARD}
     CXX_STANDARD_REQUIRED ON
     CXX_EXTENSIONS OFF
     POSITION_INDEPENDENT_CODE ON
 )
+
+qui_apply_optimizations(qui_base)
+qui_apply_optimizations(glfw)
 
 if(QUI_BUILD_DEMO)
     add_executable(qui_demo source/qui/main.cpp)
@@ -85,4 +127,6 @@ if(QUI_BUILD_DEMO)
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
     )
+
+    qui_apply_optimizations(qui_demo)
 endif()
