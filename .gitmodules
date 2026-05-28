@@ -1,0 +1,12 @@
+[submodule "source/imgui"]
+	path = source/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "source/stb"]
+	path = source/stb
+	url = https://github.com/nothings/stb
+[submodule "source/glfw"]
+	path = source/glfw
+	url = https://github.com/glfw/glfw
+[submodule "source/glad"]
+	path = source/glad
+	url = https://github.com/dav1dde/glad
