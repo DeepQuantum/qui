@@ -27,7 +27,7 @@ inline constexpr ImVec4 FrameBackgroundHovered  = rgba(0x42, 0x96, 0xF9, 0x66);
 inline constexpr ImVec4 Header                  = rgba(0x42, 0x96, 0xF9, 0x4F);
 inline constexpr ImVec4 HeaderActive            = rgba(0x42, 0x96, 0xF9);
 inline constexpr ImVec4 HeaderHovered           = rgba(0x42, 0x96, 0xF9, 0xCC);
-inline constexpr ImVec4 MenuBarBackground       = rgba(0x23, 0x23, 0x23);
+inline constexpr ImVec4 MenuBarBackground       = rgba(0x1B, 0x3F, 0x6E);
 inline constexpr ImVec4 PopupBackground         = rgba(0x14, 0x14, 0x14);
 inline constexpr ImVec4 ScrollbarBackground     = rgba(0x05, 0x05, 0x05, 0x87);
 inline constexpr ImVec4 ScrollbarGrab           = rgba(0x4F, 0x4F, 0x4F);
@@ -50,7 +50,7 @@ inline constexpr ImVec4 TableRowBackgroundAlt   = rgba(0xFF, 0xFF, 0xFF, 0x0F);
 inline constexpr ImVec4 Text                    = rgba(0xFF, 0xFF, 0xFF);
 inline constexpr ImVec4 TextDisabled            = rgba(0x7F, 0x7F, 0x7F);
 inline constexpr ImVec4 TextSelectedBackground  = rgba(0x42, 0x96, 0xF9, 0x59);
-inline constexpr ImVec4 TitleBackground         = rgba(0x23, 0x23, 0x23);
+inline constexpr ImVec4 TitleBackground         = rgba(0x16, 0x35, 0x5E);
 inline constexpr ImVec4 WindowBackground        = rgba(0x0F, 0x0F, 0x0F);
 
 inline constexpr ImVec4 AccentBlue              = rgba(0x06, 0x53, 0x9B);

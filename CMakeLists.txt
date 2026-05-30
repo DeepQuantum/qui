@@ -28,6 +28,7 @@ set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
 set(GLFW_LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
 
 add_subdirectory(source/glfw EXCLUDE_FROM_ALL)
+add_subdirectory(source/ctre EXCLUDE_FROM_ALL)
 
 find_package(OpenGL REQUIRED)
 
@@ -100,7 +101,13 @@ target_link_libraries(qui_base
     PUBLIC
         glfw
         OpenGL::GL
+    INTERFACE
+        ctre::ctre
 )
+
+if(MSVC)
+    target_compile_options(qui_base INTERFACE /templateDepth:4096)
+endif()
 
 set_target_properties(qui_base PROPERTIES
     OUTPUT_NAME qui_base

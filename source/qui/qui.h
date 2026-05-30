@@ -7,6 +7,7 @@
 #include <imgui_impl_opengl3.h>
 #include <imgui_stdlib.h>
 
+#include <qui/code_window.hpp>
 #include <qui/theme.hpp>
 #include <qui/typography.hpp>
 #include <qui/widgets.hpp>
