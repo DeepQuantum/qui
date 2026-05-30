@@ -2,8 +2,11 @@
 #include <array>
 #include <cstdio>
 #include <iterator>
+#include <span>
+#include <vector>
 
 #include <qui.h>
+#include <qui/code_window_ctre.hpp>
 
 namespace {
 
@@ -12,6 +15,55 @@ constexpr float MenuBarHeight = 27.0F;
 
 void glfw_error_callback(int error, const char *description) {
     std::fprintf(stderr, "GLFW error %d: %s\n", error, description);
+}
+
+constexpr const char *SampleDcpl =
+    "u16 #43DF4E5E85BFD47C(unknown arg_0, u16 arg_1) {\n"
+    "    unknown var_0 = npc-get-awareness(arg_0, player);\n"
+    "    unknown var_1 = npc-get-acquisition(arg_0, player);\n"
+    "    u16 var_3;\n"
+    "    string var_4;\n"
+    "    if(var_0 == arg_1) {\n"
+    "        u16 var_5;\n"
+    "        if(arg_1 == 2) {\n"
+    "            var_5 = 1;\n"
+    "            var_4 = \"Has certain\"; // friendly awareness\n"
+    "        } else {\n"
+    "            unknown var_7 = #A548628CB635DC72(arg_0, arg_1);\n"
+    "            if(var_7) {\n"
+    "                var_5 = 0;\n"
+    "                var_4 = \"Friend's awareness\";\n"
+    "            } else if(arg_1 == 3 && !(var_1 > 0.00)) {\n"
+    "                var_5 = 1;\n"
+    "                var_4 = \"Missing, no rec\";\n"
+    "            } else {\n"
+    "                var_5 = 0;\n"
+    "                var_4 = \"Not supported\";\n"
+    "            }\n"
+    "        }\n"
+    "        var_3 = var_5;\n"
+    "    } else {\n"
+    "        var_3 = 1;\n"
+    "        var_4 = \"Has none\";\n"
+    "    }\n"
+    "    return var_3;\n"
+    "}\n";
+
+std::span<const qui::code::rule> sample_dcpl_rules() {
+    using qui::code::ctre_rule;
+    using qui::code::to_u32;
+    using qui::color::rgba;
+    static const std::vector<qui::code::rule> rules = {
+        ctre_rule<R"(//.*)">(to_u32(rgba(0x6A, 0x73, 0x80))),
+        ctre_rule<R"RE(\b(if|else|while|for|return|foreach|match|state|block|event|track|statescript|options|declarations|using|as|far|near|not|and|or|in|lambda|start|end|update|null|struct|enum)\b)RE">(to_u32(rgba(0xC6, 0x78, 0xDD))),
+        ctre_rule<R"(\b((var|arg)_\d+)\b)">(to_u32(rgba(0xE0, 0x6C, 0x75))),
+        ctre_rule<R"RE("(\\.|[^"\\])*")RE">(to_u32(rgba(0x98, 0xC3, 0x79))),
+        ctre_rule<R"RE((?:--|\b)[A-Za-z0-9_/@>#\-]+\??(?=\s*\())RE">(to_u32(rgba(0x61, 0xAF, 0xEF))),
+        ctre_rule<R"RE(#[A-Z0-9]{16})RE">(to_u32(rgba(0x56, 0xB6, 0xC2))),
+        ctre_rule<R"(\b(\d+)\b)">(to_u32(rgba(0xD1, 0x9A, 0x66))),
+        ctre_rule<R"RE(\b(u0|u8|i8|u16|i16|u32|i32|u64|i64|f32|f64|bool|string|timer|vector|actor|symbol)\b\??)RE">(to_u32(rgba(0xE5, 0xC0, 0x7B))),
+    };
+    return rules;
 }
 
 void draw_menu_bar(float top_offset) {
@@ -231,6 +283,14 @@ void draw_component_demo(float top_offset) {
                 }
                 qui::end_table();
             }
+            qui::end_tab();
+        }
+
+        if (qui::begin_tab("Code View")) {
+            qui::section_label("Code View");
+            qui::text_label("Read-only, syntax-highlighted dcpl viewer using CTRE and the dcpl-lint patterns.");
+            ImGui::Spacing();
+            qui::code::code_window("##sample_code", SampleDcpl, sample_dcpl_rules());
             qui::end_tab();
         }
 

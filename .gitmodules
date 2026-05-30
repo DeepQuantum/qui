@@ -10,3 +10,6 @@
 [submodule "source/glad"]
 	path = source/glad
 	url = https://github.com/dav1dde/glad
+[submodule "source/ctre"]
+	path = source/ctre
+	url = https://github.com/hanickadot/compile-time-regular-expressions
