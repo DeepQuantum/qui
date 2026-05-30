@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstring>
 
 #include <GLFW/glfw3.h>
 
@@ -30,6 +31,7 @@ struct WindowBarState {
     bool dragging = false;
     bool resizing = false;
     bool resize_cursor_active = false;
+    bool left_mouse_down_last = false;
     int resize_edges = WindowResizeEdge_None;
     int drag_start_window_x = 0;
     int drag_start_window_y = 0;
@@ -50,6 +52,8 @@ inline bool title_bar_button(const char *id, const char *label, const ImVec2 &po
     ImGui::SetCursorScreenPos(pos);
     ImGui::PushID(id);
 
+    const ImVec2 max(pos.x + size.x, pos.y + size.y);
+    ImGui::PushClipRect(pos, max, false);
     const bool pressed = ImGui::InvisibleButton("button", size);
     const bool hovered = ImGui::IsItemHovered();
     const bool active = ImGui::IsItemActive();
@@ -64,19 +68,65 @@ inline bool title_bar_button(const char *id, const char *label, const ImVec2 &po
     }
 
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    const ImVec2 max(pos.x + size.x, pos.y + size.y);
     draw_list->AddRectFilled(pos, max, ImGui::ColorConvertFloat4ToU32(background));
 
-    const ImVec4 text_color = danger && (hovered || active) ? color::retina_dark::Text : color::retina_dark::TextDisabled;
-    const ImVec2 text_size = ImGui::CalcTextSize(label);
-    const ImVec2 text_pos(pos.x + (size.x - text_size.x) * 0.5F, pos.y + (size.y - text_size.y) * 0.5F - 1.0F);
-    draw_list->AddText(text_pos, ImGui::ColorConvertFloat4ToU32(text_color), label);
+    const ImVec4 icon_color = danger && (hovered || active) ? color::retina_dark::Text : color::retina_dark::TextDisabled;
+    const ImU32 icon_u32 = ImGui::ColorConvertFloat4ToU32(icon_color);
+    const ImVec2 center(pos.x + size.x * 0.5F, pos.y + size.y * 0.5F);
 
+    if (std::strcmp(id, "minimize") == 0) {
+        draw_list->AddLine(ImVec2(center.x - 5.5F, center.y + 4.0F), ImVec2(center.x + 5.5F, center.y + 4.0F), icon_u32, 1.5F);
+    } else if (std::strcmp(id, "maximize") == 0) {
+        if (std::strcmp(label, "[]") == 0) {
+            draw_list->AddRect(ImVec2(center.x - 3.0F, center.y - 6.0F), ImVec2(center.x + 6.0F, center.y + 3.0F), icon_u32, 0.0F, 0, 1.4F);
+            draw_list->AddRect(ImVec2(center.x - 6.0F, center.y - 3.0F), ImVec2(center.x + 3.0F, center.y + 6.0F), icon_u32, 0.0F, 0, 1.4F);
+        } else {
+            draw_list->AddRect(ImVec2(center.x - 5.0F, center.y - 5.0F), ImVec2(center.x + 5.0F, center.y + 5.0F), icon_u32, 0.0F, 0, 1.5F);
+        }
+    } else if (std::strcmp(id, "close") == 0) {
+        draw_list->AddLine(ImVec2(center.x - 5.0F, center.y - 5.0F), ImVec2(center.x + 5.0F, center.y + 5.0F), icon_u32, 1.5F);
+        draw_list->AddLine(ImVec2(center.x + 5.0F, center.y - 5.0F), ImVec2(center.x - 5.0F, center.y + 5.0F), icon_u32, 1.5F);
+    } else {
+        const ImVec2 text_size = ImGui::CalcTextSize(label);
+        const ImVec2 text_pos(pos.x + (size.x - text_size.x) * 0.5F, pos.y + (size.y - text_size.y) * 0.5F - 1.0F);
+        draw_list->AddText(text_pos, icon_u32, label);
+    }
+
+    ImGui::PopClipRect();
     ImGui::PopID();
     return pressed;
 }
 
 inline int hit_test_resize_edges(GLFWwindow *window, const ImVec2 &window_size, float border_size) {
+#if defined(_WIN32)
+    HWND hwnd = glfwGetWin32Window(window);
+    if (hwnd != nullptr) {
+        POINT cursor = {};
+        RECT rect = {};
+        GetCursorPos(&cursor);
+        GetWindowRect(hwnd, &rect);
+
+        if (cursor.x < rect.left || cursor.x > rect.right || cursor.y < rect.top || cursor.y > rect.bottom) {
+            return WindowResizeEdge_None;
+        }
+
+        int edges = WindowResizeEdge_None;
+        if (cursor.x <= rect.left + static_cast<LONG>(border_size)) {
+            edges |= WindowResizeEdge_Left;
+        } else if (cursor.x >= rect.right - static_cast<LONG>(border_size)) {
+            edges |= WindowResizeEdge_Right;
+        }
+
+        if (cursor.y <= rect.top + static_cast<LONG>(border_size)) {
+            edges |= WindowResizeEdge_Top;
+        } else if (cursor.y >= rect.bottom - static_cast<LONG>(border_size)) {
+            edges |= WindowResizeEdge_Bottom;
+        }
+
+        return edges;
+    }
+#endif
+
     double cursor_x = 0.0;
     double cursor_y = 0.0;
     glfwGetCursorPos(window, &cursor_x, &cursor_y);
@@ -148,8 +198,26 @@ inline void update_window_resize(GLFWwindow *window, const ImVec2 &window_pos, c
     (void)window_pos;
     (void)window_size;
 
+#if defined(_WIN32)
+    HWND hwnd = glfwGetWin32Window(window);
+    if (hwnd == nullptr) {
+        return;
+    }
+
+    const bool left_mouse_down = (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+    const bool left_mouse_clicked = left_mouse_down && !state.left_mouse_down_last;
+
     if (glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE) {
+        if (state.resizing && GetCapture() == hwnd) {
+            ReleaseCapture();
+        }
         state.resizing = false;
+        state.resize_edges = WindowResizeEdge_None;
+        state.left_mouse_down_last = left_mouse_down;
+        if (state.resize_cursor_active) {
+            glfwSetCursor(window, nullptr);
+            state.resize_cursor_active = false;
+        }
         return;
     }
 
@@ -166,7 +234,110 @@ inline void update_window_resize(GLFWwindow *window, const ImVec2 &window_pos, c
         state.resize_cursor_active = false;
     }
 
-    if (!state.resizing && hovered_edges != WindowResizeEdge_None && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+    if (!state.resizing && hovered_edges != WindowResizeEdge_None && left_mouse_clicked) {
+        RECT rect = {};
+        POINT cursor = {};
+        GetWindowRect(hwnd, &rect);
+        GetCursorPos(&cursor);
+
+        state.dragging = false;
+        state.resizing = true;
+        state.resize_edges = hovered_edges;
+        state.resize_cursor_start = ImVec2(static_cast<float>(cursor.x), static_cast<float>(cursor.y));
+        state.resize_window_pos_start = ImVec2(static_cast<float>(rect.left), static_cast<float>(rect.top));
+        state.resize_window_size_start = ImVec2(static_cast<float>(rect.right - rect.left), static_cast<float>(rect.bottom - rect.top));
+        SetCapture(hwnd);
+    }
+
+    if (!left_mouse_down) {
+        if (state.resizing && GetCapture() == hwnd) {
+            ReleaseCapture();
+        }
+        state.resizing = false;
+        state.resize_edges = WindowResizeEdge_None;
+        state.left_mouse_down_last = left_mouse_down;
+        return;
+    }
+
+    if (!state.resizing) {
+        state.left_mouse_down_last = left_mouse_down;
+        return;
+    }
+
+    if (GetCapture() != hwnd) {
+        state.resizing = false;
+        state.resize_edges = WindowResizeEdge_None;
+        state.left_mouse_down_last = left_mouse_down;
+        return;
+    }
+
+    POINT cursor = {};
+    GetCursorPos(&cursor);
+
+    const float delta_x = static_cast<float>(cursor.x) - state.resize_cursor_start.x;
+    const float delta_y = static_cast<float>(cursor.y) - state.resize_cursor_start.y;
+
+    float next_x = state.resize_window_pos_start.x;
+    float next_y = state.resize_window_pos_start.y;
+    float next_width = state.resize_window_size_start.x;
+    float next_height = state.resize_window_size_start.y;
+
+    if ((state.resize_edges & WindowResizeEdge_Left) != 0) {
+        const float clamped_delta = std::min(delta_x, state.resize_window_size_start.x - state.min_window_size.x);
+        next_x = state.resize_window_pos_start.x + clamped_delta;
+        next_width = state.resize_window_size_start.x - clamped_delta;
+    } else if ((state.resize_edges & WindowResizeEdge_Right) != 0) {
+        next_width = std::max(state.min_window_size.x, state.resize_window_size_start.x + delta_x);
+    }
+
+    if ((state.resize_edges & WindowResizeEdge_Top) != 0) {
+        const float clamped_delta = std::min(delta_y, state.resize_window_size_start.y - state.min_window_size.y);
+        next_y = state.resize_window_pos_start.y + clamped_delta;
+        next_height = state.resize_window_size_start.y - clamped_delta;
+    } else if ((state.resize_edges & WindowResizeEdge_Bottom) != 0) {
+        next_height = std::max(state.min_window_size.y, state.resize_window_size_start.y + delta_y);
+    }
+
+    SetWindowPos(
+        hwnd,
+        nullptr,
+        static_cast<int>(next_x),
+        static_cast<int>(next_y),
+        static_cast<int>(next_width),
+        static_cast<int>(next_height),
+        SWP_NOACTIVATE | SWP_NOZORDER
+    );
+    state.left_mouse_down_last = left_mouse_down;
+    return;
+#else
+    const bool left_mouse_down = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    const bool left_mouse_clicked = left_mouse_down && !state.left_mouse_down_last;
+
+    if (glfwGetWindowAttrib(window, GLFW_MAXIMIZED) == GLFW_TRUE) {
+        state.resizing = false;
+        state.resize_edges = WindowResizeEdge_None;
+        state.left_mouse_down_last = left_mouse_down;
+        if (state.resize_cursor_active) {
+            glfwSetCursor(window, nullptr);
+            state.resize_cursor_active = false;
+        }
+        return;
+    }
+
+    int current_width = 0;
+    int current_height = 0;
+    glfwGetWindowSize(window, &current_width, &current_height);
+
+    const int hovered_edges = hit_test_resize_edges(window, ImVec2(static_cast<float>(current_width), static_cast<float>(current_height)), border_size);
+    if (hovered_edges != WindowResizeEdge_None || state.resizing) {
+        set_resize_cursor(window, state.resizing ? state.resize_edges : hovered_edges);
+        state.resize_cursor_active = true;
+    } else if (state.resize_cursor_active) {
+        glfwSetCursor(window, nullptr);
+        state.resize_cursor_active = false;
+    }
+
+    if (!state.resizing && hovered_edges != WindowResizeEdge_None && left_mouse_clicked) {
         int window_x = 0;
         int window_y = 0;
         double cursor_x = 0.0;
@@ -182,14 +353,23 @@ inline void update_window_resize(GLFWwindow *window, const ImVec2 &window_pos, c
         state.resize_cursor_start = ImVec2(static_cast<float>(window_x) + static_cast<float>(cursor_x), static_cast<float>(window_y) + static_cast<float>(cursor_y));
         state.resize_window_pos_start = ImVec2(static_cast<float>(window_x), static_cast<float>(window_y));
         state.resize_window_size_start = ImVec2(static_cast<float>(current_width), static_cast<float>(current_height));
+#if defined(_WIN32)
+        SetCapture(glfwGetWin32Window(window));
+#endif
     }
 
-    if (!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
+    if (!left_mouse_down) {
+        if (state.resizing) {
+#if defined(_WIN32)
+            ReleaseCapture();
+#endif
+        }
         state.resizing = false;
         state.resize_edges = WindowResizeEdge_None;
     }
 
     if (!state.resizing) {
+        state.left_mouse_down_last = left_mouse_down;
         return;
     }
 
@@ -233,22 +413,20 @@ inline void update_window_resize(GLFWwindow *window, const ImVec2 &window_pos, c
         glfwSetWindowPos(window, static_cast<int>(next_x), static_cast<int>(next_y));
     }
     glfwSetWindowSize(window, static_cast<int>(next_width), static_cast<int>(next_height));
+    state.left_mouse_down_last = left_mouse_down;
+#endif
 }
 
 inline bool begin_native_title_bar_drag(GLFWwindow *window) {
-#if defined(_WIN32)
     HWND hwnd = glfwGetWin32Window(window);
     if (hwnd == nullptr) {
         return false;
     }
 
     ReleaseCapture();
-    SendMessage(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    SendMessageW(hwnd, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+    ImGui::GetIO().AddMouseButtonEvent(ImGuiMouseButton_Left, false);
     return true;
-#else
-    (void)window;
-    return false;
-#endif
 }
 
 inline void update_title_bar_drag(GLFWwindow *window, const ImVec2 &drag_min, const ImVec2 &drag_max, WindowBarState &state) {
@@ -274,15 +452,10 @@ inline void update_title_bar_drag(GLFWwindow *window, const ImVec2 &drag_min, co
     }
 
     if (can_drag && ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-        if (begin_native_title_bar_drag(window)) {
-            state.dragging = false;
-            return;
-        }
-
-        glfwGetWindowPos(window, &state.drag_start_window_x, &state.drag_start_window_y);
-
         state.dragging = true;
-        state.drag_cursor_start = ImVec2(static_cast<float>(state.drag_start_window_x) + static_cast<float>(cursor_x), static_cast<float>(state.drag_start_window_y) + static_cast<float>(cursor_y));
+        POINT cursor = {};
+        GetCursorPos(&cursor);
+        state.drag_cursor_start = ImVec2(static_cast<float>(cursor.x), static_cast<float>(cursor.y));
     }
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) != GLFW_PRESS) {
@@ -290,17 +463,16 @@ inline void update_title_bar_drag(GLFWwindow *window, const ImVec2 &drag_min, co
     }
 
     if (state.dragging) {
-        glfwGetCursorPos(window, &cursor_x, &cursor_y);
+        POINT cursor = {};
+        GetCursorPos(&cursor);
+        const float delta_x = static_cast<float>(cursor.x) - state.drag_cursor_start.x;
+        const float delta_y = static_cast<float>(cursor.y) - state.drag_cursor_start.y;
 
-        int window_x = 0;
-        int window_y = 0;
-        glfwGetWindowPos(window, &window_x, &window_y);
-
-        const float cursor_screen_x = static_cast<float>(window_x) + static_cast<float>(cursor_x);
-        const float cursor_screen_y = static_cast<float>(window_y) + static_cast<float>(cursor_y);
-        const int next_x = state.drag_start_window_x + static_cast<int>(cursor_screen_x - state.drag_cursor_start.x);
-        const int next_y = state.drag_start_window_y + static_cast<int>(cursor_screen_y - state.drag_cursor_start.y);
-        glfwSetWindowPos(window, next_x, next_y);
+        constexpr float drag_threshold = 4.0F;
+        if (delta_x * delta_x + delta_y * delta_y >= drag_threshold * drag_threshold) {
+            state.dragging = false;
+            begin_native_title_bar_drag(window);
+        }
     }
 }
 
