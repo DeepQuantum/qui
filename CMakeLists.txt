@@ -90,7 +90,8 @@ target_compile_definitions(qui_base
 
 target_include_directories(qui_base
     PUBLIC
-        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source/qui>"
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source>"
+        "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source/qui/include>"
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source/imgui>"
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source/imgui/backends>"
         "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/source/imgui/misc/cpp>"
