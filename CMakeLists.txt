@@ -29,6 +29,7 @@ set(GLFW_LIBRARY_TYPE STATIC CACHE STRING "" FORCE)
 
 add_subdirectory(source/glfw EXCLUDE_FROM_ALL)
 add_subdirectory(source/ctre EXCLUDE_FROM_ALL)
+add_subdirectory(source/rapidfuzz-cpp EXCLUDE_FROM_ALL)
 
 find_package(OpenGL REQUIRED)
 
@@ -104,6 +105,7 @@ target_link_libraries(qui_base
         OpenGL::GL
     INTERFACE
         ctre::ctre
+        rapidfuzz::rapidfuzz
 )
 
 if(MSVC)

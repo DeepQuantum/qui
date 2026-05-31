@@ -205,6 +205,9 @@ void draw_component_demo(float top_offset) {
     static char search[128] = "4D 5A";
     static char goto_address[64] = "00000080";
     static char pattern_name[128] = "portable_executable.hexpat";
+    static qui::message_box alert_box;
+    static qui::message_box dialog_box;
+    static const char *last_dialog_action = "(none yet)";
 
     const ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(viewport->Pos.x, viewport->Pos.y + top_offset));
@@ -294,11 +297,50 @@ void draw_component_demo(float top_offset) {
             qui::end_tab();
         }
 
+        if (qui::begin_tab("Dialogs")) {
+            qui::section_label("Message Boxes");
+            qui::text_label("Themed modal dialogs built from qui::message_box.");
+            ImGui::Spacing();
+
+            if (ImGui::Button("Show alert")) {
+                alert_box.popup_id = "##demo_alert";
+                qui::open_alert(alert_box, "Heads up", "This is a simple alert with a single OK button.");
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Show save dialog")) {
+                dialog_box.popup_id = "##demo_dialog";
+                dialog_box.title = "Unsaved changes";
+                dialog_box.message = "You have unsaved changes. Do you want to save them before exiting?";
+                dialog_box.buttons = {
+                    qui::message_box_button{"Exit without saving", qui::color::retina_dark::AccentRed, true, true},
+                    qui::message_box_button{"Go back"},
+                    qui::message_box_button{"Save & Exit"},
+                };
+                dialog_box.open();
+            }
+
+            ImGui::Spacing();
+            qui::text_label("Last dialog action:");
+            ImGui::SameLine();
+            ImGui::TextUnformatted(last_dialog_action);
+
+            qui::end_tab();
+        }
+
         qui::end_tabs();
     }
     ImGui::EndChild();
 
     ImGui::End();
+
+    qui::draw_message_box(alert_box);
+    switch (qui::draw_message_box(dialog_box)) {
+        case 0: last_dialog_action = "Exit without saving"; break;
+        case 1: last_dialog_action = "Go back"; break;
+        case 2: last_dialog_action = "Save & Exit"; break;
+        case qui::message_box_dismissed: last_dialog_action = "Dismissed (Esc)"; break;
+        default: break;
+    }
 }
 
 } // namespace

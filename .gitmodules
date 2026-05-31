@@ -13,3 +13,6 @@
 [submodule "source/ctre"]
 	path = source/ctre
 	url = https://github.com/hanickadot/compile-time-regular-expressions
+[submodule "source/rapidfuzz-cpp"]
+	path = source/rapidfuzz-cpp
+	url = https://github.com/rapidfuzz/rapidfuzz-cpp

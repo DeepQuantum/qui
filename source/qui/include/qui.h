@@ -8,6 +8,8 @@
 #include <imgui_stdlib.h>
 
 #include <qui/code_window.hpp>
+#include <qui/message_box.hpp>
+#include <qui/search.hpp>
 #include <qui/theme.hpp>
 #include <qui/typography.hpp>
 #include <qui/widgets.hpp>
