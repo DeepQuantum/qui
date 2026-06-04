@@ -13,7 +13,7 @@ inline void text_label(const char *text) {
     if (ImFont *font = font_semi_bold()) {
         ImGui::PushFont(font);
     }
-    ImGui::PushStyleColor(ImGuiCol_Text, color::retina_dark::TextDisabled);
+    ImGui::PushStyleColor(ImGuiCol_Text, color::active_palette().TextDisabled);
     ImGui::TextUnformatted(text);
     ImGui::PopStyleColor();
     if (font_semi_bold() != nullptr) {
@@ -25,7 +25,7 @@ inline void section_label(const char *text) {
     if (ImFont *font = font_bold()) {
         ImGui::PushFont(font);
     }
-    ImGui::PushStyleColor(ImGuiCol_Text, color::retina_dark::Highlight);
+    ImGui::PushStyleColor(ImGuiCol_Text, color::active_palette().Highlight);
     ImGui::TextUnformatted(text);
     ImGui::PopStyleColor();
     if (font_bold() != nullptr) {
@@ -116,7 +116,7 @@ inline void panel_background(const ImVec2 &min, const ImVec2 &max) {
     ImGui::GetWindowDrawList()->AddRectFilled(
         min,
         max,
-        ImGui::ColorConvertFloat4ToU32(color::retina_dark::Panel),
+        ImGui::ColorConvertFloat4ToU32(color::active_palette().Panel),
         ImGui::GetStyle().ChildRounding
     );
 }

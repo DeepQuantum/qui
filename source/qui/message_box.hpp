@@ -17,7 +17,7 @@ inline constexpr int message_box_dismissed = -2;
 
 struct message_box_button {
     std::string label;
-    ImVec4 color = color::retina_dark::Text;
+    ImVec4 color = color::active_palette().Text;
     bool left = false;  // anchored to the bottom-left instead of bottom-right
     bool ghost = false; // borderless, text-only style (no filled background)
 };
@@ -136,20 +136,20 @@ inline int draw_message_box(message_box &box) {
         draw_list->AddRectFilled(
             win_pos,
             ImVec2(win_pos.x + win_width, win_pos.y + header_h),
-            ImGui::ColorConvertFloat4ToU32(color::retina_dark::TitleBackground),
+            ImGui::ColorConvertFloat4ToU32(color::active_palette().TitleBackground),
             style.PopupRounding,
             ImDrawFlags_RoundCornersTop
         );
         draw_list->AddLine(
             ImVec2(win_pos.x, win_pos.y + header_h),
             ImVec2(win_pos.x + win_width, win_pos.y + header_h),
-            ImGui::ColorConvertFloat4ToU32(color::retina_dark::Border)
+            ImGui::ColorConvertFloat4ToU32(color::active_palette().Border)
         );
 
         const ImVec2 logo_min(win_pos.x + pad, win_pos.y + (header_h - 13.0F) * 0.5F);
         const ImVec2 logo_max(logo_min.x + 13.0F, logo_min.y + 13.0F);
-        draw_list->AddRectFilled(logo_min, logo_max, ImGui::ColorConvertFloat4ToU32(color::retina_dark::AccentBlue), 2.0F);
-        draw_list->AddRectFilled(ImVec2(logo_min.x + 4.0F, logo_min.y + 4.0F), logo_max, ImGui::ColorConvertFloat4ToU32(color::retina_dark::Highlight), 2.0F);
+        draw_list->AddRectFilled(logo_min, logo_max, ImGui::ColorConvertFloat4ToU32(color::active_palette().AccentBlue), 2.0F);
+        draw_list->AddRectFilled(ImVec2(logo_min.x + 4.0F, logo_min.y + 4.0F), logo_max, ImGui::ColorConvertFloat4ToU32(color::active_palette().Highlight), 2.0F);
 
         if (ImFont *font = font_semi_bold()) {
             ImGui::PushFont(font);
@@ -157,7 +157,7 @@ inline int draw_message_box(message_box &box) {
         const float title_h = ImGui::GetFontSize();
         draw_list->AddText(
             ImVec2(logo_max.x + 8.0F, win_pos.y + (header_h - title_h) * 0.5F),
-            ImGui::ColorConvertFloat4ToU32(color::retina_dark::Text),
+            ImGui::ColorConvertFloat4ToU32(color::active_palette().Text),
             box.title.c_str()
         );
         if (font_semi_bold() != nullptr) {
@@ -175,7 +175,7 @@ inline int draw_message_box(message_box &box) {
             const float inner_wrap = wrap_w - style.ScrollbarSize - style.FramePadding.x * 2.0F;
             const float text_h = ImGui::CalcTextSize(box.message.c_str(), nullptr, false, inner_wrap > 1.0F ? inner_wrap : wrap_w).y;
             ImGui::PushStyleColor(ImGuiCol_FrameBg, color::rgba(0x00, 0x00, 0x00, 0x00));
-            ImGui::PushStyleColor(ImGuiCol_Text, color::retina_dark::Text);
+            ImGui::PushStyleColor(ImGuiCol_Text, color::active_palette().Text);
             ImGui::InputTextMultiline(
                 "##message",
                 &box.message,

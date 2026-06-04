@@ -60,7 +60,7 @@ inline bool title_bar_button(const char *id, const char *label, const ImVec2 &po
 
     ImVec4 background = color::rgba(0x00, 0x00, 0x00, 0x00);
     if (danger && (hovered || active)) {
-        background = active ? color::rgba(0xB8, 0x32, 0x28) : color::retina_dark::AccentRed;
+        background = active ? color::rgba(0xB8, 0x32, 0x28) : color::active_palette().AccentRed;
     } else if (active) {
         background = color::rgba(0x3A, 0x3A, 0x3A);
     } else if (hovered) {
@@ -70,7 +70,7 @@ inline bool title_bar_button(const char *id, const char *label, const ImVec2 &po
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
     draw_list->AddRectFilled(pos, max, ImGui::ColorConvertFloat4ToU32(background));
 
-    const ImVec4 icon_color = danger && (hovered || active) ? color::retina_dark::Text : color::retina_dark::TextDisabled;
+    const ImVec4 icon_color = danger && (hovered || active) ? color::active_palette().Text : color::active_palette().TextDisabled;
     const ImU32 icon_u32 = ImGui::ColorConvertFloat4ToU32(icon_color);
     const ImVec2 center(pos.x + size.x * 0.5F, pos.y + size.y * 0.5F);
 
@@ -500,29 +500,29 @@ inline void draw_glfw_window_bar(GLFWwindow *window, const char *title, float he
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0F, 0.0F));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0F);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0F);
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, color::retina_dark::TitleBackground);
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, color::active_palette().TitleBackground);
     ImGui::Begin("##qui_window_bar", nullptr, flags);
 
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
     const ImVec2 min = ImGui::GetWindowPos();
     const ImVec2 max(min.x + ImGui::GetWindowWidth(), min.y + height);
 
-    draw_list->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(color::retina_dark::TitleBackground));
+    draw_list->AddRectFilled(min, max, ImGui::ColorConvertFloat4ToU32(color::active_palette().TitleBackground));
     draw_list->AddLine(
         ImVec2(min.x, max.y - 1.0F),
         ImVec2(max.x, max.y - 1.0F),
-        ImGui::ColorConvertFloat4ToU32(color::retina_dark::Border)
+        ImGui::ColorConvertFloat4ToU32(color::active_palette().Border)
     );
 
     const ImVec2 accent_min(min.x + 10.0F, min.y + 10.0F);
     const ImVec2 accent_max(accent_min.x + 13.0F, accent_min.y + 13.0F);
-    draw_list->AddRectFilled(accent_min, accent_max, ImGui::ColorConvertFloat4ToU32(color::retina_dark::AccentBlue), 2.0F);
-    draw_list->AddRectFilled(ImVec2(accent_min.x + 4.0F, accent_min.y + 4.0F), accent_max, ImGui::ColorConvertFloat4ToU32(color::retina_dark::Highlight), 2.0F);
+    draw_list->AddRectFilled(accent_min, accent_max, ImGui::ColorConvertFloat4ToU32(color::active_palette().AccentBlue), 2.0F);
+    draw_list->AddRectFilled(ImVec2(accent_min.x + 4.0F, accent_min.y + 4.0F), accent_max, ImGui::ColorConvertFloat4ToU32(color::active_palette().Highlight), 2.0F);
 
     if (ImFont *font = font_semi_bold()) {
         ImGui::PushFont(font);
     }
-    draw_list->AddText(ImVec2(min.x + 34.0F, min.y + 8.0F), ImGui::ColorConvertFloat4ToU32(color::retina_dark::Text), title);
+    draw_list->AddText(ImVec2(min.x + 34.0F, min.y + 8.0F), ImGui::ColorConvertFloat4ToU32(color::active_palette().Text), title);
     if (font_semi_bold() != nullptr) {
         ImGui::PopFont();
     }

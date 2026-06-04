@@ -1,9 +1,11 @@
 #pragma once
 
 #include <algorithm>
+#include <cctype>
 #include <cstddef>
 #include <cstdio>
 #include <functional>
+#include <string>
 #include <span>
 #include <string_view>
 #include <vector>
@@ -32,11 +34,11 @@ inline const theme &default_theme() {
     static const theme value = [] {
         using namespace qui::color;
         theme t{};
-        t.background = to_u32(retina_dark::Panel);
-        t.gutter_background = to_u32(retina_dark::WindowBackground);
-        t.gutter_text = to_u32(retina_dark::TextDisabled);
+        t.background = to_u32(active_palette().Panel);
+        t.gutter_background = to_u32(active_palette().WindowBackground);
+        t.gutter_text = to_u32(active_palette().TextDisabled);
         t.current_line = to_u32(rgba(0xFF, 0xFF, 0xFF, 0x0D));
-        t.text = to_u32(retina_dark::Text);
+        t.text = to_u32(active_palette().Text);
         return t;
     }();
     return value;
@@ -144,7 +146,7 @@ inline void code_window(const char *id, std::string_view text, std::span<const r
 
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
-    const ImU32 divider = to_u32(qui::color::retina_dark::Border);
+    const ImU32 divider = to_u32(qui::color::active_palette().Border);
     const float mouse_y = ImGui::GetMousePos().y;
     const bool window_hovered = ImGui::IsWindowHovered();
 
@@ -207,11 +209,35 @@ struct colored_span {
     std::string_view text;
 };
 
-inline void code_window_colored(const char *id, std::span<const colored_span> spans, const ImVec2 &size = ImVec2(0.0F, 0.0F), const theme &th = default_theme()) {
+struct hovered_token {
+    bool hovered = false;
+    ImU32 color = 0;
+    std::string text;
+    std::string line_text;
+    std::size_t line = 0;
+    std::size_t column = 0;
+    ImVec2 screen_pos = ImVec2(0.0F, 0.0F);
+};
+
+inline bool is_token_char(char c) {
+    return std::isalnum(static_cast<unsigned char>(c)) != 0 || c == '_';
+}
+
+inline void code_window_colored(
+    const char *id,
+    std::span<const colored_span> spans,
+    const ImVec2 &size = ImVec2(0.0F, 0.0F),
+    const theme &th = default_theme(),
+    hovered_token *hovered = nullptr
+) {
     struct run {
         ImU32 color;
         std::string_view text;
     };
+
+    if (hovered != nullptr) {
+        *hovered = {};
+    }
 
     std::vector<std::vector<run>> lines;
     lines.emplace_back();
@@ -282,8 +308,9 @@ inline void code_window_colored(const char *id, std::span<const colored_span> sp
     }
 
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
-    const ImU32 divider = to_u32(qui::color::retina_dark::Border);
+    const ImU32 divider = to_u32(qui::color::active_palette().Border);
     const float mouse_y = ImGui::GetMousePos().y;
+    const float mouse_x = ImGui::GetMousePos().x;
     const bool window_hovered = ImGui::IsWindowHovered();
     char number_buffer[16];
 
@@ -305,11 +332,39 @@ inline void code_window_colored(const char *id, std::span<const colored_span> sp
             draw_list->AddText(ImVec2(pos.x + gutter_w - pad - number_w, pos.y + 1.0F), th.gutter_text, number_buffer);
 
             float x = pos.x + gutter_w + pad;
+            std::size_t column = 0;
             for (const run &r : lines[static_cast<std::size_t>(row)]) {
                 const char *begin = r.text.data();
                 const char *end = begin + r.text.size();
+                const float run_w = ImGui::CalcTextSize(begin, end).x;
+                if (hovered != nullptr && !hovered->hovered && window_hovered &&
+                    mouse_y >= pos.y && mouse_y < pos.y + line_h &&
+                    mouse_x >= x && mouse_x < x + run_w && !r.text.empty()) {
+                    std::size_t char_index = static_cast<std::size_t>((mouse_x - x) / std::max(char_w, 1.0F));
+                    char_index = std::min(char_index, r.text.size() - 1);
+                    if (is_token_char(r.text[char_index])) {
+                        std::size_t token_begin = char_index;
+                        while (token_begin > 0 && is_token_char(r.text[token_begin - 1])) {
+                            --token_begin;
+                        }
+                        std::size_t token_end = char_index + 1;
+                        while (token_end < r.text.size() && is_token_char(r.text[token_end])) {
+                            ++token_end;
+                        }
+                        hovered->hovered = true;
+                        hovered->color = r.color;
+                        hovered->text = std::string(r.text.substr(token_begin, token_end - token_begin));
+                        hovered->line = static_cast<std::size_t>(row);
+                        hovered->column = column + token_begin;
+                        hovered->screen_pos = ImVec2(x + static_cast<float>(token_begin) * char_w, pos.y);
+                        for (const run &line_run : lines[static_cast<std::size_t>(row)]) {
+                            hovered->line_text.append(line_run.text);
+                        }
+                    }
+                }
                 draw_list->AddText(ImVec2(x, pos.y + 1.0F), r.color, begin, end);
-                x += ImGui::CalcTextSize(begin, end).x;
+                x += run_w;
+                column += r.text.size();
             }
 
             ImGui::Dummy(ImVec2(content_w, line_h));

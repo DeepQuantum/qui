@@ -63,11 +63,141 @@ inline constexpr ImVec4 Panel                   = rgba(0x18, 0x18, 0x18);
 inline constexpr ImVec4 PanelRaised             = rgba(0x23, 0x23, 0x23);
 
 } // namespace retina_dark
+
+// A runtime, overridable copy of the named theme colors. Widgets read from the
+// active palette instead of the compile-time retina_dark constants so the host
+// app can swap the entire UI theme at runtime. Defaults to retina_dark.
+struct palette {
+    ImVec4 Border, Button, ButtonActive, ButtonHovered;
+    ImVec4 FrameBackground, FrameBackgroundActive, FrameBackgroundHovered;
+    ImVec4 Header, HeaderActive, HeaderHovered;
+    ImVec4 MenuBarBackground, PopupBackground;
+    ImVec4 ScrollbarBackground, ScrollbarGrab, ScrollbarGrabActive, ScrollbarGrabHovered;
+    ImVec4 SeparatorActive, SeparatorHovered;
+    ImVec4 SliderGrab, SliderGrabActive;
+    ImVec4 Tab, TabActive, TabHovered, TabUnfocused, TabUnfocusedActive;
+    ImVec4 TableBorderLight, TableBorderStrong, TableHeaderBackground, TableRowBackground, TableRowBackgroundAlt;
+    ImVec4 Text, TextDisabled, TextSelectedBackground;
+    ImVec4 TitleBackground, WindowBackground;
+    ImVec4 AccentBlue, AccentGreen, AccentPurple, AccentRed, AccentYellow;
+    ImVec4 Highlight, Panel, PanelRaised;
+};
+
+inline palette make_retina_dark_palette() {
+    using namespace retina_dark;
+    palette p;
+    p.Border = Border;
+    p.Button = Button;
+    p.ButtonActive = ButtonActive;
+    p.ButtonHovered = ButtonHovered;
+    p.FrameBackground = FrameBackground;
+    p.FrameBackgroundActive = FrameBackgroundActive;
+    p.FrameBackgroundHovered = FrameBackgroundHovered;
+    p.Header = Header;
+    p.HeaderActive = HeaderActive;
+    p.HeaderHovered = HeaderHovered;
+    p.MenuBarBackground = MenuBarBackground;
+    p.PopupBackground = PopupBackground;
+    p.ScrollbarBackground = ScrollbarBackground;
+    p.ScrollbarGrab = ScrollbarGrab;
+    p.ScrollbarGrabActive = ScrollbarGrabActive;
+    p.ScrollbarGrabHovered = ScrollbarGrabHovered;
+    p.SeparatorActive = SeparatorActive;
+    p.SeparatorHovered = SeparatorHovered;
+    p.SliderGrab = SliderGrab;
+    p.SliderGrabActive = SliderGrabActive;
+    p.Tab = Tab;
+    p.TabActive = TabActive;
+    p.TabHovered = TabHovered;
+    p.TabUnfocused = TabUnfocused;
+    p.TabUnfocusedActive = TabUnfocusedActive;
+    p.TableBorderLight = TableBorderLight;
+    p.TableBorderStrong = TableBorderStrong;
+    p.TableHeaderBackground = TableHeaderBackground;
+    p.TableRowBackground = TableRowBackground;
+    p.TableRowBackgroundAlt = TableRowBackgroundAlt;
+    p.Text = Text;
+    p.TextDisabled = TextDisabled;
+    p.TextSelectedBackground = TextSelectedBackground;
+    p.TitleBackground = TitleBackground;
+    p.WindowBackground = WindowBackground;
+    p.AccentBlue = AccentBlue;
+    p.AccentGreen = AccentGreen;
+    p.AccentPurple = AccentPurple;
+    p.AccentRed = AccentRed;
+    p.AccentYellow = AccentYellow;
+    p.Highlight = Highlight;
+    p.Panel = Panel;
+    p.PanelRaised = PanelRaised;
+    return p;
+}
+
+inline palette &active_palette() {
+    static palette p = make_retina_dark_palette();
+    return p;
+}
+
 } // namespace color
 
-inline void apply_retina_dark_theme(ImGuiStyle &style = ImGui::GetStyle()) {
-    using namespace color::retina_dark;
+inline void apply_palette_colors(const color::palette &P, ImGuiStyle &style = ImGui::GetStyle()) {
+    auto *colors = style.Colors;
+    colors[ImGuiCol_Text] = P.Text;
+    colors[ImGuiCol_TextDisabled] = P.TextDisabled;
+    colors[ImGuiCol_WindowBg] = P.WindowBackground;
+    colors[ImGuiCol_ChildBg] = color::rgba(0x00, 0x00, 0x00, 0x00);
+    colors[ImGuiCol_PopupBg] = P.PopupBackground;
+    colors[ImGuiCol_Border] = P.Border;
+    colors[ImGuiCol_BorderShadow] = color::rgba(0x00, 0x00, 0x00, 0x00);
+    colors[ImGuiCol_FrameBg] = P.FrameBackground;
+    colors[ImGuiCol_FrameBgHovered] = P.FrameBackgroundHovered;
+    colors[ImGuiCol_FrameBgActive] = P.FrameBackgroundActive;
+    colors[ImGuiCol_TitleBg] = P.TitleBackground;
+    colors[ImGuiCol_TitleBgActive] = P.TitleBackground;
+    colors[ImGuiCol_TitleBgCollapsed] = P.TitleBackground;
+    colors[ImGuiCol_MenuBarBg] = P.MenuBarBackground;
+    colors[ImGuiCol_ScrollbarBg] = P.ScrollbarBackground;
+    colors[ImGuiCol_ScrollbarGrab] = P.ScrollbarGrab;
+    colors[ImGuiCol_ScrollbarGrabHovered] = P.ScrollbarGrabHovered;
+    colors[ImGuiCol_ScrollbarGrabActive] = P.ScrollbarGrabActive;
+    colors[ImGuiCol_CheckMark] = P.ButtonHovered;
+    colors[ImGuiCol_SliderGrab] = P.SliderGrab;
+    colors[ImGuiCol_SliderGrabActive] = P.SliderGrabActive;
+    colors[ImGuiCol_Button] = P.Button;
+    colors[ImGuiCol_ButtonHovered] = P.ButtonHovered;
+    colors[ImGuiCol_ButtonActive] = P.ButtonActive;
+    colors[ImGuiCol_Header] = P.Header;
+    colors[ImGuiCol_HeaderHovered] = P.HeaderHovered;
+    colors[ImGuiCol_HeaderActive] = P.HeaderActive;
+    colors[ImGuiCol_Separator] = P.Border;
+    colors[ImGuiCol_SeparatorHovered] = P.SeparatorHovered;
+    colors[ImGuiCol_SeparatorActive] = P.SeparatorActive;
+    colors[ImGuiCol_ResizeGrip] = color::rgba(0x42, 0x96, 0xF9, 0x33);
+    colors[ImGuiCol_ResizeGripHovered] = color::rgba(0x42, 0x96, 0xF9, 0xAA);
+    colors[ImGuiCol_ResizeGripActive] = color::rgba(0x42, 0x96, 0xF9, 0xF2);
+    colors[ImGuiCol_Tab] = P.Tab;
+    colors[ImGuiCol_TabHovered] = P.TabHovered;
+    colors[ImGuiCol_TabActive] = P.TabActive;
+    colors[ImGuiCol_TabUnfocused] = P.TabUnfocused;
+    colors[ImGuiCol_TabUnfocusedActive] = P.TabUnfocusedActive;
+    colors[ImGuiCol_TableHeaderBg] = P.TableHeaderBackground;
+    colors[ImGuiCol_TableBorderStrong] = P.TableBorderStrong;
+    colors[ImGuiCol_TableBorderLight] = P.TableBorderLight;
+    colors[ImGuiCol_TableRowBg] = P.TableRowBackground;
+    colors[ImGuiCol_TableRowBgAlt] = P.TableRowBackgroundAlt;
+    colors[ImGuiCol_TextSelectedBg] = P.TextSelectedBackground;
+    colors[ImGuiCol_DragDropTarget] = color::rgba(0xFF, 0xFF, 0x00, 0xE5);
+    colors[ImGuiCol_NavHighlight] = P.ButtonHovered;
+    colors[ImGuiCol_NavWindowingHighlight] = color::rgba(0xFF, 0xFF, 0xFF, 0xB2);
+    colors[ImGuiCol_NavWindowingDimBg] = color::rgba(0xCC, 0xCC, 0xCC, 0x33);
+    colors[ImGuiCol_ModalWindowDimBg] = color::rgba(0xCC, 0xCC, 0xCC, 0x59);
 
+#ifdef ImGuiCol_DockingPreview
+    colors[ImGuiCol_DockingPreview] = color::rgba(0x42, 0x96, 0xF9, 0xB2);
+    colors[ImGuiCol_DockingEmptyBg] = color::rgba(0x0F, 0x0F, 0x0F, 0xEF);
+#endif
+}
+
+inline void apply_retina_dark_theme(ImGuiStyle &style = ImGui::GetStyle()) {
     ImGui::StyleColorsDark(&style);
 
     style.WindowPadding = ImVec2(8.0F, 8.0F);
@@ -90,61 +220,7 @@ inline void apply_retina_dark_theme(ImGuiStyle &style = ImGui::GetStyle()) {
     style.GrabRounding = 3.0F;
     style.TabRounding = 3.0F;
 
-    auto *colors = style.Colors;
-    colors[ImGuiCol_Text] = Text;
-    colors[ImGuiCol_TextDisabled] = TextDisabled;
-    colors[ImGuiCol_WindowBg] = WindowBackground;
-    colors[ImGuiCol_ChildBg] = color::rgba(0x00, 0x00, 0x00, 0x00);
-    colors[ImGuiCol_PopupBg] = PopupBackground;
-    colors[ImGuiCol_Border] = Border;
-    colors[ImGuiCol_BorderShadow] = color::rgba(0x00, 0x00, 0x00, 0x00);
-    colors[ImGuiCol_FrameBg] = FrameBackground;
-    colors[ImGuiCol_FrameBgHovered] = FrameBackgroundHovered;
-    colors[ImGuiCol_FrameBgActive] = FrameBackgroundActive;
-    colors[ImGuiCol_TitleBg] = TitleBackground;
-    colors[ImGuiCol_TitleBgActive] = TitleBackground;
-    colors[ImGuiCol_TitleBgCollapsed] = TitleBackground;
-    colors[ImGuiCol_MenuBarBg] = MenuBarBackground;
-    colors[ImGuiCol_ScrollbarBg] = ScrollbarBackground;
-    colors[ImGuiCol_ScrollbarGrab] = ScrollbarGrab;
-    colors[ImGuiCol_ScrollbarGrabHovered] = ScrollbarGrabHovered;
-    colors[ImGuiCol_ScrollbarGrabActive] = ScrollbarGrabActive;
-    colors[ImGuiCol_CheckMark] = ButtonHovered;
-    colors[ImGuiCol_SliderGrab] = SliderGrab;
-    colors[ImGuiCol_SliderGrabActive] = SliderGrabActive;
-    colors[ImGuiCol_Button] = Button;
-    colors[ImGuiCol_ButtonHovered] = ButtonHovered;
-    colors[ImGuiCol_ButtonActive] = ButtonActive;
-    colors[ImGuiCol_Header] = Header;
-    colors[ImGuiCol_HeaderHovered] = HeaderHovered;
-    colors[ImGuiCol_HeaderActive] = HeaderActive;
-    colors[ImGuiCol_Separator] = Border;
-    colors[ImGuiCol_SeparatorHovered] = SeparatorHovered;
-    colors[ImGuiCol_SeparatorActive] = SeparatorActive;
-    colors[ImGuiCol_ResizeGrip] = color::rgba(0x42, 0x96, 0xF9, 0x33);
-    colors[ImGuiCol_ResizeGripHovered] = color::rgba(0x42, 0x96, 0xF9, 0xAA);
-    colors[ImGuiCol_ResizeGripActive] = color::rgba(0x42, 0x96, 0xF9, 0xF2);
-    colors[ImGuiCol_Tab] = Tab;
-    colors[ImGuiCol_TabHovered] = TabHovered;
-    colors[ImGuiCol_TabActive] = TabActive;
-    colors[ImGuiCol_TabUnfocused] = TabUnfocused;
-    colors[ImGuiCol_TabUnfocusedActive] = TabUnfocusedActive;
-    colors[ImGuiCol_TableHeaderBg] = TableHeaderBackground;
-    colors[ImGuiCol_TableBorderStrong] = TableBorderStrong;
-    colors[ImGuiCol_TableBorderLight] = TableBorderLight;
-    colors[ImGuiCol_TableRowBg] = TableRowBackground;
-    colors[ImGuiCol_TableRowBgAlt] = TableRowBackgroundAlt;
-    colors[ImGuiCol_TextSelectedBg] = TextSelectedBackground;
-    colors[ImGuiCol_DragDropTarget] = color::rgba(0xFF, 0xFF, 0x00, 0xE5);
-    colors[ImGuiCol_NavHighlight] = ButtonHovered;
-    colors[ImGuiCol_NavWindowingHighlight] = color::rgba(0xFF, 0xFF, 0xFF, 0xB2);
-    colors[ImGuiCol_NavWindowingDimBg] = color::rgba(0xCC, 0xCC, 0xCC, 0x33);
-    colors[ImGuiCol_ModalWindowDimBg] = color::rgba(0xCC, 0xCC, 0xCC, 0x59);
-
-#ifdef ImGuiCol_DockingPreview
-    colors[ImGuiCol_DockingPreview] = color::rgba(0x42, 0x96, 0xF9, 0xB2);
-    colors[ImGuiCol_DockingEmptyBg] = color::rgba(0x0F, 0x0F, 0x0F, 0xEF);
-#endif
+    apply_palette_colors(color::active_palette(), style);
 }
 
 } // namespace qui
