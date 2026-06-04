@@ -1,10 +1,16 @@
 #pragma once
 
 #include <algorithm>
+#include <filesystem>
+#include <string>
 
 #include <imgui.h>
 
 namespace qui {
+
+std::filesystem::path executable_directory();
+
+std::filesystem::path font_directory();
 
 struct FontSet {
     ImFont *medium = nullptr;
@@ -73,19 +79,14 @@ inline FontSet &load_default_fonts(float dpi_scale = 1.0F, float size = 17.0F) {
     FontSet &fonts = default_fonts();
     fonts.dpi_scale = density;
 
-#ifdef QUI_BASE_FONT_DIR
-    const char *medium_font_path = QUI_BASE_FONT_DIR "/GeistMono-Medium.ttf";
-    const char *semi_bold_font_path = QUI_BASE_FONT_DIR "/GeistMono-SemiBold.ttf";
-    const char *bold_font_path = QUI_BASE_FONT_DIR "/GeistMono-Bold.ttf";
-#else
-    const char *medium_font_path = "";
-    const char *semi_bold_font_path = "";
-    const char *bold_font_path = "";
-#endif
+    const std::filesystem::path font_dir = font_directory();
+    const std::string medium_font_path = (font_dir / "GeistMono-Medium.ttf").string();
+    const std::string semi_bold_font_path = (font_dir / "GeistMono-SemiBold.ttf").string();
+    const std::string bold_font_path = (font_dir / "GeistMono-Bold.ttf").string();
 
-    fonts.medium = load_font_or_default(medium_font_path, size, font_config(density, 1.06F));
-    fonts.semi_bold = load_font_or_default(semi_bold_font_path, size, font_config(density, 1.04F));
-    fonts.bold = load_font_or_default(bold_font_path, size, font_config(density, 1.02F));
+    fonts.medium = load_font_or_default(medium_font_path.c_str(), size, font_config(density, 1.06F));
+    fonts.semi_bold = load_font_or_default(semi_bold_font_path.c_str(), size, font_config(density, 1.04F));
+    fonts.bold = load_font_or_default(bold_font_path.c_str(), size, font_config(density, 1.02F));
 
     io.FontDefault = fonts.medium;
     set_active_fonts(fonts);

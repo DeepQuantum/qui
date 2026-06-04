@@ -199,5 +199,133 @@ inline void code_window(const char *id, std::string_view text, std::span<const r
     ImGui::PopStyleColor();
 }
 
+// A pre-colored run of text. Unlike the rule-based code_window, the caller has
+// already decided each segment's color (e.g. from an AST walk), so no
+// per-character tokenization happens here. Segments may contain newlines.
+struct colored_span {
+    ImU32 color;
+    std::string_view text;
+};
+
+inline void code_window_colored(const char *id, std::span<const colored_span> spans, const ImVec2 &size = ImVec2(0.0F, 0.0F), const theme &th = default_theme()) {
+    struct run {
+        ImU32 color;
+        std::string_view text;
+    };
+
+    std::vector<std::vector<run>> lines;
+    lines.emplace_back();
+    std::size_t max_chars = 0;
+    std::size_t cur_chars = 0;
+
+    auto push_piece = [&](ImU32 color, std::string_view piece) {
+        if (!piece.empty() && piece.back() == '\r') {
+            piece.remove_suffix(1);
+        }
+        if (!piece.empty()) {
+            lines.back().push_back({color, piece});
+            cur_chars += piece.size();
+        }
+    };
+
+    for (const colored_span &span : spans) {
+        const std::string_view text = span.text;
+        std::size_t start = 0;
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (text[i] == '\n') {
+                push_piece(span.color, text.substr(start, i - start));
+                max_chars = std::max(max_chars, cur_chars);
+                cur_chars = 0;
+                lines.emplace_back();
+                start = i + 1;
+            }
+        }
+        push_piece(span.color, text.substr(start));
+    }
+    max_chars = std::max(max_chars, cur_chars);
+
+    int digits = 1;
+    for (std::size_t n = lines.size(); n >= 10; n /= 10) {
+        ++digits;
+    }
+
+    ImFont *mono = qui::font_medium();
+    if (mono != nullptr) {
+        ImGui::PushFont(mono);
+    }
+    const float char_w = ImGui::CalcTextSize("0").x;
+    const float line_h = ImGui::GetTextLineHeight() + 2.0F;
+    if (mono != nullptr) {
+        ImGui::PopFont();
+    }
+
+    const float pad = char_w * 0.75F;
+    const float gutter_w = pad + static_cast<float>(digits) * char_w + pad;
+    const float content_w = gutter_w + static_cast<float>(max_chars) * char_w + char_w;
+
+    const ImGuiStyle &style = ImGui::GetStyle();
+    ImVec2 effective_size = size;
+    if (effective_size.y <= 0.0F) {
+        const float view_w = effective_size.x > 0.0F ? effective_size.x : ImGui::GetContentRegionAvail().x;
+        effective_size.y = static_cast<float>(lines.size()) * line_h + style.ChildBorderSize * 2.0F;
+        if (content_w > view_w) {
+            effective_size.y += style.ScrollbarSize;
+        }
+    }
+
+    ImGui::PushStyleColor(ImGuiCol_ChildBg, th.background);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0F, 0.0F));
+    ImGui::BeginChild(id, effective_size, ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+
+    if (mono != nullptr) {
+        ImGui::PushFont(mono);
+    }
+
+    ImDrawList *draw_list = ImGui::GetWindowDrawList();
+    const ImU32 divider = to_u32(qui::color::retina_dark::Border);
+    const float mouse_y = ImGui::GetMousePos().y;
+    const bool window_hovered = ImGui::IsWindowHovered();
+    char number_buffer[16];
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0F, 0.0F));
+    ImGuiListClipper clipper;
+    clipper.Begin(static_cast<int>(lines.size()), line_h);
+    while (clipper.Step()) {
+        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row) {
+            const ImVec2 pos = ImGui::GetCursorScreenPos();
+
+            draw_list->AddRectFilled(pos, ImVec2(pos.x + gutter_w, pos.y + line_h), th.gutter_background);
+            if (window_hovered && mouse_y >= pos.y && mouse_y < pos.y + line_h) {
+                draw_list->AddRectFilled(ImVec2(pos.x + gutter_w, pos.y), ImVec2(pos.x + content_w, pos.y + line_h), th.current_line);
+            }
+            draw_list->AddLine(ImVec2(pos.x + gutter_w, pos.y), ImVec2(pos.x + gutter_w, pos.y + line_h), divider);
+
+            std::snprintf(number_buffer, sizeof(number_buffer), "%d", row + 1);
+            const float number_w = ImGui::CalcTextSize(number_buffer).x;
+            draw_list->AddText(ImVec2(pos.x + gutter_w - pad - number_w, pos.y + 1.0F), th.gutter_text, number_buffer);
+
+            float x = pos.x + gutter_w + pad;
+            for (const run &r : lines[static_cast<std::size_t>(row)]) {
+                const char *begin = r.text.data();
+                const char *end = begin + r.text.size();
+                draw_list->AddText(ImVec2(x, pos.y + 1.0F), r.color, begin, end);
+                x += ImGui::CalcTextSize(begin, end).x;
+            }
+
+            ImGui::Dummy(ImVec2(content_w, line_h));
+        }
+    }
+    clipper.End();
+    ImGui::PopStyleVar();
+
+    if (mono != nullptr) {
+        ImGui::PopFont();
+    }
+
+    ImGui::EndChild();
+    ImGui::PopStyleVar();
+    ImGui::PopStyleColor();
+}
+
 } // namespace code
 } // namespace qui
