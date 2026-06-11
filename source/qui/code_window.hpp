@@ -23,6 +23,7 @@ struct theme {
     ImU32 gutter_background;
     ImU32 gutter_text;
     ImU32 current_line;
+    ImU32 active_line;
     ImU32 text;
 };
 
@@ -38,6 +39,9 @@ inline const theme &default_theme() {
         t.gutter_background = to_u32(active_palette().WindowBackground);
         t.gutter_text = to_u32(active_palette().TextDisabled);
         t.current_line = to_u32(rgba(0xFF, 0xFF, 0xFF, 0x0D));
+        ImVec4 highlight = active_palette().Highlight;
+        highlight.w = 0.18F;
+        t.active_line = to_u32(highlight);
         t.text = to_u32(active_palette().Text);
         return t;
     }();
@@ -228,7 +232,9 @@ inline void code_window_colored(
     std::span<const colored_span> spans,
     const ImVec2 &size = ImVec2(0.0F, 0.0F),
     const theme &th = default_theme(),
-    hovered_token *hovered = nullptr
+    hovered_token *hovered = nullptr,
+    int active_line = -1,
+    bool scroll_to_active = false
 ) {
     struct run {
         ImU32 color;
@@ -307,6 +313,11 @@ inline void code_window_colored(
         ImGui::PushFont(mono);
     }
 
+    if (scroll_to_active && active_line >= 0) {
+        const float target = static_cast<float>(active_line) * line_h - (ImGui::GetWindowHeight() - line_h) * 0.5F;
+        ImGui::SetScrollY(std::max(0.0F, target));
+    }
+
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
     const ImU32 divider = to_u32(qui::color::active_palette().Border);
     const float mouse_y = ImGui::GetMousePos().y;
@@ -322,6 +333,9 @@ inline void code_window_colored(
             const ImVec2 pos = ImGui::GetCursorScreenPos();
 
             draw_list->AddRectFilled(pos, ImVec2(pos.x + gutter_w, pos.y + line_h), th.gutter_background);
+            if (row == active_line) {
+                draw_list->AddRectFilled(ImVec2(pos.x + gutter_w, pos.y), ImVec2(pos.x + content_w, pos.y + line_h), th.active_line);
+            }
             if (window_hovered && mouse_y >= pos.y && mouse_y < pos.y + line_h) {
                 draw_list->AddRectFilled(ImVec2(pos.x + gutter_w, pos.y), ImVec2(pos.x + content_w, pos.y + line_h), th.current_line);
             }

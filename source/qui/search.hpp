@@ -65,4 +65,32 @@ inline std::vector<fuzzy_match> fuzzy_search(
     return matches;
 }
 
+inline std::vector<fuzzy_match> substring_search(
+    std::string_view query,
+    const std::vector<std::string> &choices
+) {
+    std::vector<fuzzy_match> matches;
+    if (query.empty()) {
+        matches.reserve(choices.size());
+        for (std::size_t i = 0; i < choices.size(); ++i) {
+            matches.push_back({i, 0.0});
+        }
+        return matches;
+    }
+
+    const std::string normalized_query = fuzzy_normalize(query);
+    for (std::size_t i = 0; i < choices.size(); ++i) {
+        const std::string normalized_choice = fuzzy_normalize(choices[i]);
+        const std::size_t position = normalized_choice.find(normalized_query);
+        if (position != std::string::npos) {
+            matches.push_back({i, static_cast<double>(position)});
+        }
+    }
+
+    std::stable_sort(matches.begin(), matches.end(), [](const fuzzy_match &lhs, const fuzzy_match &rhs) {
+        return lhs.score < rhs.score;
+    });
+    return matches;
+}
+
 } // namespace qui
